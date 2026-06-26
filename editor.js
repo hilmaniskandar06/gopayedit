@@ -49,8 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let undoHistory = [];
 
     // --- PENGATURAN SUPABASE ---
-    const SUPABASE_URL = "ISI_DENGAN_PROJECT_URL_ANDA";
-    const SUPABASE_KEY = "ISI_DENGAN_API_KEY_ANDA";
+    const SUPABASE_URL = "https://orqtqcoavcnkqyetuyqz.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_fy73ucTrSnz9uZKsBrLJcA_Nt2XRo6g";
     const USE_SUPABASE = SUPABASE_URL.startsWith("http");
 
     let layoutData = [];
