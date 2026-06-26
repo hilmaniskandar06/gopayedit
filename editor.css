@@ -1,0 +1,385 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+body {
+    background-color: #f4f4f7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding-bottom: 0; /* Diubah agar gambar mentok bawah tanpa ruang bocor */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+}
+
+.app-container {
+    width: 35%;
+    min-width: 320px;
+    position: relative;
+    background-color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.main-bg {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 35%;
+    min-width: 320px;
+    z-index: 9999;
+    background-color: transparent;
+}
+
+.bottom-nav img {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+}
+
+.secret-trigger {
+    position: absolute;
+    right: 60%;
+    bottom: 0;
+    width: 20%;
+    height: 70%;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0);
+    z-index: 10000;
+}
+
+/* Wrapper Komponen (Kotak + Teks Menempel Jadi Satu) */
+.menu-item-wrapper {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Kotak Placeholder Atas */
+.placeholder-zone {
+    width: 100%;
+    border: 2px solid red;
+    background-color: rgba(255, 0, 0, 0.1);
+    cursor: move;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Kotak yang terkunci akan berwarna abu-abu dan ikon gembok */
+body.admin-mode .menu-item-wrapper.selected .placeholder-zone[data-locked="true"] {
+    border: 2px solid #666;
+    background-color: rgba(100, 100, 100, 0.2);
+}
+
+body.admin-mode .menu-item-wrapper.selected .placeholder-zone {
+    border: 2px solid #00c853;
+    background-color: rgba(0, 200, 83, 0.2);
+}
+
+body:not(.admin-mode) .placeholder-zone {
+    border: none;
+    background-color: transparent;
+    cursor: default;
+}
+
+.placeholder-zone img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+/* Label Teks di Bawah Kotak (Contenteditable) */
+.editable-text-label {
+    width: 100%;
+    text-align: center;
+    padding: 4px 2px;
+    word-wrap: break-word;
+    color: #333;
+    font-size: 11px;
+    min-height: 1.2em;
+    background: transparent;
+    border: 1px dashed transparent;
+    transition: all 0.2s;
+}
+
+body.admin-mode .editable-text-label {
+    border: 1px dashed #bbb;
+    cursor: text;
+    user-select: text;
+}
+
+body.admin-mode .menu-item-wrapper.selected .editable-text-label {
+    border: 1px dashed #00c853;
+    background-color: rgba(0, 200, 83, 0.05);
+}
+
+/* Tombol Tarik Ukuran (Resize Handle) */
+.resize-handle {
+    display: none;
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background-color: red;
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+    z-index: 20;
+}
+
+body.admin-mode .menu-item-wrapper.selected .resize-handle {
+    background-color: #00c853;
+}
+
+body.admin-mode .resize-handle {
+    display: block;
+}
+
+.box-label {
+    display: none;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background: red;
+    color: white;
+    font-size: 8px;
+    padding: 1px 3px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 11;
+}
+
+body.admin-mode .menu-item-wrapper.selected .box-label {
+    background: #00c853;
+}
+
+body.admin-mode .box-label {
+    display: block;
+}
+
+/* Tombol Popup Pengaturan (Gear) */
+.settings-trigger {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 32px;
+    height: 32px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    z-index: 100006;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+.settings-trigger:hover {
+    background: #f0f0f0;
+}
+body.admin-mode .menu-item-wrapper.selected .settings-trigger {
+    display: flex;
+}
+
+/* Kotak Popup Pengaturan */
+.settings-popup {
+    position: absolute;
+    top: 25px;
+    right: -15px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    z-index: 100007;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 200px;
+    cursor: default;
+}
+.settings-popup.show {
+    display: flex;
+}
+.settings-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+.settings-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+}
+.settings-popup select,
+.settings-popup input[type="text"],
+.settings-popup input[type="number"] {
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    outline: none;
+}
+.settings-popup button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.settings-popup input[type="color"] {
+    border: none;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Menu Bar Admin Atas */
+.admin-bar {
+    display: none;
+    position: fixed;
+    top: 10px;
+    background: #222;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 13px;
+    z-index: 100000;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    gap: 12px;
+    align-items: center;
+    max-width: 90%;
+    flex-wrap: wrap;
+}
+
+body.admin-mode .admin-bar {
+    display: flex;
+}
+
+.admin-bar button {
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.admin-bar button:disabled {
+    background: #555 !important;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+#addBoxBtn {
+    background: #007acc;
+}
+
+#duplicateBtn {
+    background: #e65100;
+}
+
+#undoBtn {
+    background: #6a1b9a;
+}
+
+#deleteBtn {
+    background: #d50000;
+}
+
+#exitAdminBtn {
+    background: #555;
+}
+
+/* Fixed Container untuk elemen yang dilock posisinya */
+.fixed-container {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 35%;
+    min-width: 320px;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.fixed-container .menu-item-wrapper {
+    pointer-events: auto;
+}
+
+/* Styling untuk Link Hotspot */
+.placeholder-zone[data-type="link"] {
+    background-color: transparent !important;
+    border: none !important;
+    cursor: pointer;
+}
+
+body.admin-mode .placeholder-zone[data-type="link"] {
+    background-color: rgba(33, 150, 243, 0.4) !important;
+    border: 2px dashed #2196F3 !important;
+    cursor: move;
+}
+
+body.admin-mode .menu-item-wrapper.selected .placeholder-zone[data-type="link"] {
+    border: 2px solid #2196F3 !important;
+    background-color: rgba(33, 150, 243, 0.6) !important;
+}
+
+body.admin-mode .placeholder-zone[data-type="link"]::after {
+    content: "🔗 Link Hotspot";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    pointer-events: none;
+    text-align: center;
+}
+
+body:not(.admin-mode) .placeholder-zone[data-type="link"]::after {
+    display: none;
+}
+
+/* Responsif untuk Mode Mobile */
+@media (max-width: 600px) {
+
+    .app-container,
+    .bottom-nav,
+    .fixed-container {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+}
