@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         pageName = 'index.html';
     }
     const STORAGE_KEY = (pageName === 'index.html') ? 'gopay_layout_v3' : 'gopay_layout_' + pageName.replace('.html', '');
-    
+
     // Core Elements
     const appContainer = document.getElementById('appContainer');
     const fixedContainer = document.getElementById('fixedContainer');
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectCountLabel = document.getElementById('selectCount');
 
     let isEditing = false;
-    let selectedBoxIds = []; 
+    let selectedBoxIds = [];
     let undoHistory = [];
 
     // --- PENGATURAN SUPABASE ---
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     layoutData = typeof data[0].layout_data === 'string' ? JSON.parse(data[0].layout_data) : data[0].layout_data;
                     return;
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Gagal load dari Supabase", e);
             }
         }
@@ -91,19 +91,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             const statusEl = document.getElementById('saveStatus');
             if (statusEl) statusEl.innerText = "Menyimpan online... ⏳";
             try {
-                await fetch(`${SUPABASE_URL}/rest/v1/mockup_layouts`, {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/mockup_layouts`, {
                     method: 'POST',
-                    headers: { 
-                        'apikey': SUPABASE_KEY, 
+                    headers: {
+                        'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                     },
                     body: JSON.stringify({ page_name: STORAGE_KEY, layout_data: layoutData })
                 });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    console.error("Supabase Error:", errText);
+                    throw new Error("Server menolak: " + res.status);
+                }
                 if (statusEl) statusEl.innerText = "Tersimpan ✔️";
                 setTimeout(() => { if (statusEl && statusEl.innerText.includes("Tersimpan")) statusEl.innerText = ""; }, 2000);
-            } catch(e) {
+            } catch (e) {
                 console.error("Gagal save ke Supabase", e);
                 if (statusEl) statusEl.innerText = "Gagal simpan ❌";
             }
@@ -250,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         });
-        selectedBoxIds = []; 
+        selectedBoxIds = [];
         saveAndRender();
     });
 
@@ -273,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fixedContainer.querySelectorAll('.menu-item-wrapper').forEach(w => w.remove());
 
         const containerWidth = appContainer.clientWidth;
-        const estimatedContainerHeight = containerWidth / 0.35; 
+        const estimatedContainerHeight = containerWidth / 0.35;
         const scaleFactor = containerWidth / 400;
 
         layoutData.forEach((item) => {
@@ -295,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 textDiv.style.border = isEditing ? "1px dashed #555" : "none";
                 textDiv.style.padding = isEditing ? "10px" : "0px";
                 textDiv.style.height = "auto";
-                
+
                 const content = document.createElement('div');
                 content.innerText = item.text || "Klik untuk edit...";
                 content.contentEditable = isEditing ? "true" : "false";
@@ -307,12 +312,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 content.style.color = item.color || "#000000";
                 content.style.textAlign = item.align || "left";
                 content.style.outline = "none";
-                
-                content.addEventListener('input', () => { 
-                    item.text = content.innerText; 
+
+                content.addEventListener('input', () => {
+                    item.text = content.innerText;
                     debouncedSave();
                 });
-                
+
                 content.addEventListener('focus', () => {
                     if (!selectedBoxIds.includes(item.id)) {
                         selectedBoxIds = [item.id];
@@ -324,7 +329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 handle.className = 'resize-handle';
 
                 const dragHandleTop = document.createElement('div');
-                dragHandleTop.innerHTML = '✥ Geser'; 
+                dragHandleTop.innerHTML = '✥ Geser';
                 dragHandleTop.style.position = 'absolute';
                 dragHandleTop.style.top = '-20px';
                 dragHandleTop.style.left = '50%';
@@ -339,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dragHandleTop.style.whiteSpace = 'nowrap';
                 dragHandleTop.style.display = (isEditing && selectedBoxIds.includes(item.id)) ? 'block' : 'none';
                 dragHandleTop.contentEditable = "false";
-                
+
                 textDiv.appendChild(dragHandleTop);
                 textDiv.appendChild(content);
                 textDiv.appendChild(handle);
@@ -388,11 +393,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 popup.addEventListener('mousedown', e => e.stopPropagation());
                 trigger.addEventListener('mousedown', e => e.stopPropagation());
-                
+
                 toolbar.querySelector('.font-fam').addEventListener('change', (e) => { saveToHistory(); item.font = e.target.value; saveAndRender(); });
                 toolbar.querySelector('.font-sz').addEventListener('change', (e) => { saveToHistory(); item.size = parseInt(e.target.value) || 14; saveAndRender(); });
-                toolbar.querySelector('.font-col').addEventListener('input', (e) => { 
-                    item.color = e.target.value; 
+                toolbar.querySelector('.font-col').addEventListener('input', (e) => {
+                    item.color = e.target.value;
                     content.style.color = item.color;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData));
                 });
@@ -419,7 +424,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 zone.className = 'placeholder-zone';
                 zone.setAttribute('data-type', 'link');
                 zone.setAttribute('data-locked', item.locked || false);
-                
+
                 const actualHeightPx = (item.height / 100) * (parentContainer.offsetHeight || estimatedContainerHeight);
                 zone.style.height = actualHeightPx + 'px';
 
@@ -500,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const label = document.createElement('div');
             label.className = 'box-label';
             label.innerText = item.id.split('-')[0] + '-' + item.id.slice(-3);
-            
+
             const handle = document.createElement('div');
             handle.className = 'resize-handle';
 
@@ -511,7 +516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             textLabel.className = 'editable-text-label';
             textLabel.innerText = item.text;
             textLabel.contentEditable = isEditing ? "true" : "false";
-            
+
             textLabel.style.fontFamily = item.font;
             textLabel.style.fontWeight = item.bold ? 'bold' : 'normal';
             textLabel.style.fontStyle = item.italic ? 'italic' : 'normal';
@@ -595,12 +600,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function makeInteractive(wrapper, zone, boxConfig) {
         zone.addEventListener('mousedown', (e) => {
-            if (boxConfig.locked) return; 
+            if (boxConfig.locked) return;
             if (!isEditing) return;
-            
+
             if (e.target.isContentEditable) {
                 e.stopPropagation();
-                return; 
+                return;
             }
 
             e.preventDefault();
@@ -608,7 +613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const isResize = e.target.classList.contains('resize-handle');
             let isToggleClick = false;
-            
+
             if (!isResize) {
                 if (!selectedBoxIds.includes(boxConfig.id)) {
                     selectedBoxIds.push(boxConfig.id);
@@ -616,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updateSelectCount();
                     renderLayout();
                 } else {
-                    isToggleClick = true; 
+                    isToggleClick = true;
                 }
             }
 
@@ -624,10 +629,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const activeContainer = boxConfig.isFixed ? fixedContainer : appContainer;
             const containerRect = activeContainer.getBoundingClientRect();
-            
+
             const startX = e.clientX;
             const startY = e.clientY;
-            
+
             const dragGroupSnapshots = [];
             selectedBoxIds.forEach(id => {
                 const wrapEl = document.getElementById('wrap-' + id);
@@ -668,9 +673,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (current) {
                         const newW = current.startWidthPx + deltaX;
                         const newH = current.startHeightPx + deltaY;
-                        
+
                         if (current.config.type === 'text') {
-                            const finalW = Math.max(newW, 20); 
+                            const finalW = Math.max(newW, 20);
                             current.config.width = (finalW / containerRect.width) * 100;
                             current.wrapper.style.width = current.config.width + '%';
                         } else if (current.config.type === 'link') {
@@ -682,7 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             current.zone.style.height = finalH + 'px';
                         } else {
                             const side = Math.max(newW, newH);
-                            const finalSide = Math.max(side, 15); 
+                            const finalSide = Math.max(side, 15);
                             current.config.width = (finalSide / containerRect.width) * 100;
                             current.config.height = (finalSide / containerRect.height) * 100;
                             current.wrapper.style.width = current.config.width + '%';
@@ -693,13 +698,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dragGroupSnapshots.forEach(snap => {
                         const snapContainer = snap.config.isFixed ? fixedContainer : appContainer;
                         const snapRect = snapContainer.getBoundingClientRect();
-                        
+
                         const newLeftPx = snap.startLeftPx + deltaX;
                         const newTopPx = snap.startTopPx + deltaY;
-                        
+
                         snap.config.left = (newLeftPx / snapRect.width) * 100;
                         snap.config.top = (newTopPx / snapRect.height) * 100;
-                        
+
                         snap.wrapper.style.left = snap.config.left + '%';
                         snap.wrapper.style.top = snap.config.top + '%';
                     });
@@ -716,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData));
-                renderLayout(); 
+                renderLayout();
             }
 
             window.addEventListener('mousemove', onMouseMove);
@@ -732,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         layoutData.forEach(item => {
             const wrapper = document.getElementById('wrap-' + item.id);
             if (!wrapper) return;
-            
+
             const parentContainer = item.isFixed ? fixedContainer : appContainer;
             const parentHeight = parentContainer.offsetHeight || estimatedContainerHeight;
 
@@ -788,7 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveToHistory();
         selectedBoxIds.forEach(id => {
             const item = layoutData.find(b => b.id === id);
-            if (item) item.image = ''; 
+            if (item) item.image = '';
         });
         saveAndRender();
     });
