@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 content.contentEditable = isEditing ? "true" : "false";
                 content.style.width = "100%";
                 content.style.fontFamily = item.font;
-                content.style.fontSize = (item.size * scaleFactor) + 'px';
+                content.style.fontSize = item.size + 'px';
                 content.style.fontWeight = item.bold ? 'bold' : 'normal';
                 content.style.fontStyle = item.italic ? 'italic' : 'normal';
                 content.style.color = item.color || "#000000";
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             textLabel.style.fontFamily = item.font;
             textLabel.style.fontWeight = item.bold ? 'bold' : 'normal';
             textLabel.style.fontStyle = item.italic ? 'italic' : 'normal';
-            textLabel.style.fontSize = (item.size * scaleFactor) + 'px';
+            textLabel.style.fontSize = item.size + 'px';
 
             textLabel.addEventListener('input', () => {
                 item.text = textLabel.innerText;
@@ -743,7 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (item.type === 'text') {
                 const content = wrapper.querySelector('div[contenteditable]');
-                if (content) content.style.fontSize = (item.size * scaleFactor) + 'px';
+                if (content) content.style.fontSize = item.size + 'px';
             } else {
                 const zone = wrapper.querySelector('.placeholder-zone');
                 if (zone) {
@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const textLabel = wrapper.querySelector('.editable-text-label');
                 if (textLabel) {
-                    textLabel.style.fontSize = (item.size * scaleFactor) + 'px';
+                    textLabel.style.fontSize = item.size + 'px';
                 }
             }
         });
