@@ -600,7 +600,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function makeInteractive(wrapper, zone, boxConfig) {
         zone.addEventListener('mousedown', (e) => {
-            if (boxConfig.locked) return;
             if (!isEditing) return;
 
             if (e.target.isContentEditable) {
@@ -612,6 +611,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.stopPropagation();
 
             const isResize = e.target.classList.contains('resize-handle');
+            if (boxConfig.locked && isResize) return;
+
             let isToggleClick = false;
 
             if (!isResize) {
@@ -626,6 +627,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (!selectedBoxIds.includes(boxConfig.id)) return;
+
+            if (boxConfig.locked) {
+                function onMouseUpLocked() {
+                    window.removeEventListener('mouseup', onMouseUpLocked);
+                    if (isToggleClick) {
+                        selectedBoxIds = selectedBoxIds.filter(id => id !== boxConfig.id);
+                        updateSelectCount();
+                        renderLayout();
+                    }
+                }
+                window.addEventListener('mouseup', onMouseUpLocked);
+                return;
+            }
 
             const activeContainer = boxConfig.isFixed ? fixedContainer : appContainer;
             const containerRect = activeContainer.getBoundingClientRect();
