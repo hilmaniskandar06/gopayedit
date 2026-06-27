@@ -18,8 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
     document.body.insertAdjacentHTML('afterbegin', adminBarHTML);
 
-    const fixedContainerHTML = `<div class="fixed-container" id="fixedContainer"></div>`;
-    document.body.insertAdjacentHTML('beforeend', fixedContainerHTML);
+    // fixedContainerHTML removed to use bottom-nav as the anchor
 
     // Dynamic Storage Key
     const pathParts = window.location.pathname.split('/');
@@ -31,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Core Elements
     const appContainer = document.getElementById('appContainer');
-    const fixedContainer = document.getElementById('fixedContainer');
+    const fixedContainer = document.querySelector('.bottom-nav');
     const exitAdminBtn = document.getElementById('exitAdminBtn');
     const addBoxBtn = document.getElementById('addBoxBtn');
     const addTextBtn = document.getElementById('addTextBtn');
