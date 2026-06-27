@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             tapCount = 1;
         }
-        if (tapCount === 4) {
+        if (tapCount === 10) {
             toggleAdminMode();
             tapCount = 0;
         }
