@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Fitur Rahasia Mobile: Tap 4x dengan cepat di mana saja untuk masuk/keluar mode studio
+    /* Fitur Rahasia Mobile: Tap 4x dengan cepat di mana saja untuk masuk/keluar mode studio
     let tapCount = 0;
     let lastTapTime = 0;
     document.addEventListener('touchstart', (e) => {
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         lastTapTime = currentTime;
     });
-
+*/
     exitAdminBtn.addEventListener('click', () => {
         document.body.classList.remove('admin-mode');
         isEditing = false;
