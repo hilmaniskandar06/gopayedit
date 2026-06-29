@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    /* Fitur Rahasia Mobile: Tap 4x dengan cepat di mana saja untuk masuk/keluar mode studio
+    // Fitur Rahasia Mobile: Tap 4x dengan cepat di mana saja untuk masuk/keluar mode studio
     let tapCount = 0;
     let lastTapTime = 0;
     document.addEventListener('touchstart', (e) => {
@@ -204,13 +204,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             tapCount = 1;
         }
-        if (tapCount === 20) {
+        if (tapCount === 4) {
             toggleAdminMode();
             tapCount = 0;
         }
         lastTapTime = currentTime;
     });
-*/
+
     exitAdminBtn.addEventListener('click', () => {
         document.body.classList.remove('admin-mode');
         isEditing = false;
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     addBoxBtn.addEventListener('click', () => {
         saveToHistory();
         const newId = 'box-' + Date.now();
-        layoutData.push({ id: newId, top: 15, left: 15, width: 20, height: 4, image: '', text: 'Menu Baru', font: 'sans-serif', bold: false, italic: false, size: 11, isFixed: false });
+        layoutData.push({ id: newId, top: 15, left: 15, width: 20, height: 4, image: '', text: 'Menu Baru', font: 'sans-serif', bold: false, italic: false, size: 11, isFixed: false, linkUrl: '' });
         saveAndRender();
     });
 
@@ -538,6 +538,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             toolbar.innerHTML = `
                 <div class="settings-trigger">⚙️</div>
                 <div class="settings-popup">
+                    <div class="settings-row" style="flex-direction:column; align-items:flex-start;">
+                        <label>URL Tujuan:</label>
+                        <input type="text" class="link-input" placeholder="misal: promo.html" value="${item.linkUrl || ''}" style="width:100%; box-sizing:border-box;">
+                    </div>
                     <div class="settings-row">
                         <label>Font:</label>
                         <select class="font-fam">
@@ -586,6 +590,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             toolbar.querySelector('.lock-scroll-cb').addEventListener('change', (e) => {
                 saveToHistory(); item.isFixed = e.target.checked; saveAndRender();
+            });
+            toolbar.querySelector('.link-input').addEventListener('input', (e) => {
+                item.linkUrl = e.target.value;
+                debouncedSave();
+            });
+            toolbar.querySelector('.link-input').addEventListener('change', () => saveToHistory());
+
+            wrapper.addEventListener('click', () => {
+                if (!isEditing && item.linkUrl) {
+                    window.location.href = item.linkUrl;
+                }
             });
 
             wrapper.appendChild(toolbar);
