@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     addPopupBtn.addEventListener('click', () => {
         saveToHistory();
         const newId = 'popup-' + Date.now();
-        layoutData.push({ type: 'popup', id: newId, top: 15, left: 15, width: 40, height: 30, image: '', isFixed: false });
+        layoutData.push({ type: 'popup', id: newId, top: 15, left: 15, width: 10, height: 10, image: '', isFixed: false });
         saveAndRender();
     });
 
@@ -579,9 +579,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!isEditing) {
                     wrapper.style.display = 'none';
                     wrapper.style.zIndex = '99999';
-                    wrapper.addEventListener('click', () => {
-                        wrapper.style.display = 'none';
-                    });
                 }
                 
                 makeInteractive(wrapper, zone, item);
@@ -723,6 +720,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
+            if (!isEditing && item.targetPopup) {
+                wrapper.style.zIndex = '100000';
+            }
+
             wrapper.appendChild(toolbar);
             wrapper.appendChild(zone);
             wrapper.appendChild(textLabel);
@@ -834,6 +835,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             current.config.height = (finalH / containerRect.height) * 100;
                             current.wrapper.style.width = current.config.width + '%';
                             current.zone.style.height = finalH + 'px';
+                        } else if (current.config.type === 'popup') {
+                            const finalW = Math.max(newW, 10);
+                            current.config.width = (finalW / containerRect.width) * 100;
+                            const currentRatio = current.startHeightPx / current.startWidthPx;
+                            const finalH = finalW * currentRatio;
+                            current.config.height = (finalH / containerRect.height) * 100;
+                            current.wrapper.style.width = current.config.width + '%';
+                            current.zone.style.height = finalH + 'px';
                         } else {
                             const side = Math.max(newW, newH);
                             const finalSide = Math.max(side, 15);
@@ -925,11 +934,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     saveToHistory();
-                    selectedBoxIds.forEach(id => {
-                        const item = layoutData.find(b => b.id === id);
-                        if (item) item.image = event.target.result;
-                    });
-                    saveAndRender();
+                    const img = new Image();
+                    img.onload = () => {
+                        const imgRatio = img.naturalHeight / img.naturalWidth;
+                        const containerWidth = appContainer.clientWidth;
+                        const containerHeight = appContainer.offsetHeight || (containerWidth / 0.35);
+
+                        selectedBoxIds.forEach(id => {
+                            const item = layoutData.find(b => b.id === id);
+                            if (item) {
+                                item.image = event.target.result;
+                                if (item.type === 'popup') {
+                                    const actualWidthPx = (item.width / 100) * containerWidth;
+                                    const newHeightPx = actualWidthPx * imgRatio;
+                                    item.height = (newHeightPx / containerHeight) * 100;
+                                }
+                            }
+                        });
+                        saveAndRender();
+                    };
+                    img.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
             }
