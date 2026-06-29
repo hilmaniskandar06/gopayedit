@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button id="addBoxBtn">➕ Tambah Menu</button>
             <button id="addTextBtn" style="background: #2196F3;">📝 Tambah Teks</button>
             <button id="addLinkBtn" style="background: #00bcd4;">🔗 Tambah Link</button>
+            <button id="addPopupBtn" style="background: #9c27b0;">🎇 Tambah Popup</button>
             <button id="uploadImgBtn">🖼️ Gambar</button> 
             <button id="duplicateBtn">👥 Duplikat (<span id="selectCount">0</span>)</button>
             <button id="undoBtn" disabled>↩️ Undo</button>
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addBoxBtn = document.getElementById('addBoxBtn');
     const addTextBtn = document.getElementById('addTextBtn');
     const addLinkBtn = document.getElementById('addLinkBtn');
+    const addPopupBtn = document.getElementById('addPopupBtn');
     const duplicateBtn = document.getElementById('duplicateBtn');
     const deleteBtn = document.getElementById('deleteBtn');
     const uploadImgBtn = document.getElementById('uploadImgBtn');
@@ -246,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     addBoxBtn.addEventListener('click', () => {
         saveToHistory();
         const newId = 'box-' + Date.now();
-        layoutData.push({ id: newId, top: 15, left: 15, width: 20, height: 4, image: '', text: 'Menu Baru', font: 'sans-serif', bold: false, italic: false, size: 11, isFixed: false, linkUrl: '' });
+        layoutData.push({ id: newId, top: 15, left: 15, width: 20, height: 4, image: '', text: 'Menu Baru', font: 'sans-serif', bold: false, italic: false, size: 11, isFixed: false, linkUrl: '', targetPage: '' });
         saveAndRender();
     });
 
@@ -260,7 +262,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     addLinkBtn.addEventListener('click', () => {
         saveToHistory();
         const newId = 'link-' + Date.now();
-        layoutData.push({ type: 'link', id: newId, top: 80, left: 20, width: 60, height: 10, linkUrl: '', isFixed: true });
+        layoutData.push({ type: 'link', id: newId, top: 30, left: 30, width: 25, height: 8, isFixed: false, linkUrl: '' });
+        saveAndRender();
+    });
+
+    addPopupBtn.addEventListener('click', () => {
+        saveToHistory();
+        const newId = 'popup-' + Date.now();
+        layoutData.push({ type: 'popup', id: newId, top: 15, left: 15, width: 40, height: 30, image: '', isFixed: false });
         saveAndRender();
     });
 
@@ -303,6 +312,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const containerWidth = appContainer.clientWidth;
         const estimatedContainerHeight = containerWidth / 0.35;
         const scaleFactor = containerWidth / 400;
+
+        const popupItems = layoutData.filter(b => b.type === 'popup');
 
         layoutData.forEach((item) => {
             const parentContainer = item.isFixed ? fixedContainer : appContainer;
@@ -514,6 +525,69 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wrapper.classList.add('selected');
             }
 
+            if (item.type === 'popup') {
+                const zone = document.createElement('div');
+                zone.className = 'placeholder-zone';
+                zone.setAttribute('data-locked', item.locked || false);
+                const actualHeightPx = (item.height / 100) * (parentContainer.offsetHeight || estimatedContainerHeight);
+                zone.style.height = actualHeightPx + 'px';
+
+                if (item.image) {
+                    zone.innerHTML = `<img src="${item.image}" style="width:100%; height:100%; object-fit:contain; pointer-events:none;">`;
+                } else {
+                    zone.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:#999; font-size:10px;">[Popup: ${item.id}]</div>`;
+                }
+
+                const label = document.createElement('div');
+                label.className = 'box-label';
+                label.innerText = 'Popup: ' + item.id.slice(-4);
+                
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                zone.appendChild(label);
+                zone.appendChild(handle);
+
+                const toolbar = document.createElement('div');
+                toolbar.innerHTML = `
+                    <div class="settings-trigger">⚙️</div>
+                    <div class="settings-popup">
+                        <div class="settings-row">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                <input type="checkbox" class="lock-scroll-cb" ${item.isFixed ? 'checked' : ''}> 📌 Lock Scroll
+                            </label>
+                        </div>
+                    </div>
+                `;
+                const trigger = toolbar.querySelector('.settings-trigger');
+                const popup = toolbar.querySelector('.settings-popup');
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.settings-popup.show').forEach(p => { if (p !== popup) p.classList.remove('show'); });
+                    popup.classList.toggle('show');
+                });
+                popup.addEventListener('mousedown', e => e.stopPropagation());
+                trigger.addEventListener('mousedown', e => e.stopPropagation());
+
+                toolbar.querySelector('.lock-scroll-cb').addEventListener('change', (e) => {
+                    saveToHistory(); item.isFixed = e.target.checked; saveAndRender();
+                });
+
+                wrapper.appendChild(toolbar);
+                wrapper.appendChild(zone);
+                parentContainer.appendChild(wrapper);
+
+                if (!isEditing) {
+                    wrapper.style.display = 'none';
+                    wrapper.style.zIndex = '99999';
+                    wrapper.addEventListener('click', () => {
+                        wrapper.style.display = 'none';
+                    });
+                }
+                
+                makeInteractive(wrapper, zone, item);
+                return;
+            }
+
             const zone = document.createElement('div');
             zone.className = 'placeholder-zone';
             zone.setAttribute('data-locked', item.locked || false);
@@ -557,6 +631,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
+            let popupOptions = '<option value="">-- Tidak Ada --</option>';
+            popupItems.forEach(p => {
+                popupOptions += `<option value="${p.id}" ${item.targetPopup === p.id ? 'selected' : ''}>${p.id.slice(-4)}</option>`;
+            });
+
             const toolbar = document.createElement('div');
             toolbar.innerHTML = `
                 <div class="settings-trigger">⚙️</div>
@@ -564,6 +643,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="settings-row" style="flex-direction:column; align-items:flex-start;">
                         <label>URL Tujuan:</label>
                         <input type="text" class="link-input" placeholder="misal: promo.html" value="${item.linkUrl || ''}" style="width:100%; box-sizing:border-box;">
+                    </div>
+                    <div class="settings-row" style="flex-direction:column; align-items:flex-start; margin-top:5px;">
+                        <label>PNG Tujuan (Popup):</label>
+                        <select class="popup-target-select" style="width:100%; box-sizing:border-box;">
+                            ${popupOptions}
+                        </select>
                     </div>
                     <div class="settings-row">
                         <label>Font:</label>
@@ -619,10 +704,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 debouncedSave();
             });
             toolbar.querySelector('.link-input').addEventListener('change', () => saveToHistory());
+            toolbar.querySelector('.popup-target-select').addEventListener('change', (e) => {
+                item.targetPopup = e.target.value;
+                saveToHistory();
+                saveAndRender();
+            });
 
             wrapper.addEventListener('click', () => {
-                if (!isEditing && item.linkUrl) {
-                    window.location.href = item.linkUrl;
+                if (!isEditing) {
+                    if (item.targetPopup) {
+                        const targetEl = document.getElementById('wrap-' + item.targetPopup);
+                        if (targetEl) {
+                            targetEl.style.display = targetEl.style.display === 'none' ? 'block' : 'none';
+                        }
+                    } else if (item.linkUrl) {
+                        window.location.href = item.linkUrl;
+                    }
                 }
             });
 
