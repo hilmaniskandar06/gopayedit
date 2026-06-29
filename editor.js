@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // Inject Admin Bar HTML
     const adminBarHTML = `
+        <div id="saveStatus" style="font-size:16px; color:#fff; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); font-weight:bold; background:rgba(0,180,80,0.9); padding:15px 25px; border-radius:12px; box-shadow:0 6px 15px rgba(0,0,0,0.3); z-index:999999; display:none; text-align:center;"></div>
         <div class="admin-bar" id="adminBar">
-            <div id="saveStatus" style="font-size:10px; color:#555; position:absolute; top:-18px; right:10px; font-weight:bold; background:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.1);"></div>
             <span>🛠️ <b>Super Studio Mode</b></span>
             <button id="addBoxBtn">➕ Tambah Menu</button>
             <button id="addTextBtn" style="background: #2196F3;">📝 Tambah Teks</button>
@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button id="deleteBtn">🗑️ Hapus</button>
             <button id="removeImgBtn" style="background: #ff9800;">❌ Hapus Gambar</button>
             <button id="lockBtn" style="background: #4caf50;">🔒 Kunci/Buka</button>
+            <button id="manualSaveBtn" style="background: #e91e63;">💾 Simpan</button>
             <button id="exitAdminBtn">Selesai</button>
         </div>
     `;
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const uploadImgBtn = document.getElementById('uploadImgBtn');
     const removeImgBtn = document.getElementById('removeImgBtn');
     const lockBtn = document.getElementById('lockBtn');
+    const manualSaveBtn = document.getElementById('manualSaveBtn');
     const undoBtn = document.getElementById('undoBtn');
     const selectCountLabel = document.getElementById('selectCount');
 
@@ -85,11 +87,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    async function saveLayoutData() {
+    async function saveLayoutData(showNotif = true) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData));
+        const statusEl = document.getElementById('saveStatus');
+        
         if (USE_SUPABASE) {
-            const statusEl = document.getElementById('saveStatus');
-            if (statusEl) statusEl.innerText = "Menyimpan online... ⏳";
+            if (statusEl && showNotif) {
+                statusEl.innerText = "Menyimpan online... ⏳";
+                statusEl.style.display = 'block';
+            }
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/mockup_layouts`, {
                     method: 'POST',
@@ -106,11 +112,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error("Supabase Error:", errText);
                     throw new Error("Server menolak: " + res.status);
                 }
-                if (statusEl) statusEl.innerText = "Tersimpan ✔️";
-                setTimeout(() => { if (statusEl && statusEl.innerText.includes("Tersimpan")) statusEl.innerText = ""; }, 2000);
+                if (statusEl && showNotif) {
+                    statusEl.innerText = "Tersimpan ✔️";
+                    setTimeout(() => { if (statusEl) statusEl.style.display = "none"; }, 2000);
+                }
             } catch (e) {
                 console.error("Gagal save ke Supabase", e);
-                if (statusEl) statusEl.innerText = "Gagal simpan ❌";
+                if (statusEl && showNotif) {
+                    statusEl.innerText = "Gagal simpan ❌";
+                    setTimeout(() => { if (statusEl) statusEl.style.display = "none"; }, 3000);
+                }
+            }
+        } else {
+            if (statusEl && showNotif) {
+                statusEl.innerText = "Tersimpan ✔️";
+                statusEl.style.display = 'block';
+                setTimeout(() => { if (statusEl) statusEl.style.display = "none"; }, 2000);
             }
         }
     }
@@ -118,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let saveTimeout;
     function debouncedSave() {
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => saveLayoutData(), 1000);
+        saveTimeout = setTimeout(() => saveLayoutData(false), 1000);
     }
 
     await loadLayoutData();
@@ -140,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function saveAndRender() {
-        saveLayoutData();
+        saveLayoutData(false);
         renderLayout();
     }
 
@@ -148,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (undoHistory.length > 0) {
             let previousState = undoHistory.pop();
             layoutData = JSON.parse(previousState);
-            saveLayoutData();
+            saveLayoutData(false);
             renderLayout();
         }
         if (undoHistory.length === 0) undoBtn.disabled = true;
@@ -175,6 +192,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     undoBtn.addEventListener('click', triggerUndo);
+
+    if (manualSaveBtn) {
+        manualSaveBtn.addEventListener('click', () => {
+            saveLayoutData(true);
+        });
+    }
 
     function toggleAdminMode() {
         isEditing = !isEditing;
