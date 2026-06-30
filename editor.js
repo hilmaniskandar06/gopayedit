@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button id="addTextBtn" style="background: #2196F3;">📝 Tambah Teks</button>
             <button id="addLinkBtn" style="background: #00bcd4;">🔗 Tambah Link</button>
             <button id="addPopupBtn" style="background: #9c27b0;">🎇 Tambah Popup</button>
+            <button id="addSliderBtn" style="background: #ff5722;">🎠 Tambah Slider</button>
             <button id="uploadImgBtn">🖼️ Gambar</button> 
             <button id="duplicateBtn">👥 Duplikat (<span id="selectCount">0</span>)</button>
             <button id="undoBtn" disabled>↩️ Undo</button>
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addTextBtn = document.getElementById('addTextBtn');
     const addLinkBtn = document.getElementById('addLinkBtn');
     const addPopupBtn = document.getElementById('addPopupBtn');
+    const addSliderBtn = document.getElementById('addSliderBtn');
     const duplicateBtn = document.getElementById('duplicateBtn');
     const deleteBtn = document.getElementById('deleteBtn');
     const uploadImgBtn = document.getElementById('uploadImgBtn');
@@ -270,6 +272,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveToHistory();
         const newId = 'popup-' + Date.now();
         layoutData.push({ type: 'popup', id: newId, top: 15, left: 15, width: 10, height: 10, image: '', isFixed: false });
+        saveAndRender();
+    });
+
+    addSliderBtn.addEventListener('click', () => {
+        saveToHistory();
+        const newId = 'slider-' + Date.now();
+        layoutData.push({ type: 'slider', id: newId, top: 15, left: 5, width: 90, height: 20, isFixed: false, padding: 5, gap: 10, slides: [] });
         saveAndRender();
     });
 
@@ -585,6 +594,242 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            if (item.type === 'slider') {
+                const zone = document.createElement('div');
+                zone.className = 'placeholder-zone';
+                zone.setAttribute('data-locked', item.locked || false);
+                const actualHeightPx = (item.height / 100) * (parentContainer.offsetHeight || estimatedContainerHeight);
+                zone.style.height = actualHeightPx + 'px';
+                
+                const gap = item.gap !== undefined ? item.gap : 10;
+                const padding = item.padding !== undefined ? item.padding : 5;
+                
+                zone.style.display = 'flex';
+                zone.style.justifyContent = 'flex-start';
+                zone.style.overflowX = 'auto';
+                zone.style.gap = gap + 'px';
+                zone.style.whiteSpace = 'nowrap';
+                zone.style.padding = '0 ' + padding + 'px';
+                zone.style.boxSizing = 'border-box';
+                zone.style.scrollbarWidth = 'none';
+
+                let isDraggingSlider = false;
+
+                if (item.slides && item.slides.length > 0) {
+                    item.slides.forEach((slide, idx) => {
+                        const img = document.createElement('img');
+                        img.src = slide.image;
+                        img.style.height = '100%';
+                        img.style.width = 'auto';
+                        img.style.objectFit = 'contain';
+                        img.style.cursor = isEditing ? 'default' : 'grab';
+                        img.style.flexShrink = '0';
+                        img.ondragstart = () => false;
+
+                        if (!isEditing) {
+                            img.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                if (isDraggingSlider) return;
+                                if (slide.targetPopup) {
+                                    const targetEl = document.getElementById('wrap-' + slide.targetPopup);
+                                    if (targetEl) {
+                                        targetEl.style.display = targetEl.style.display === 'none' ? 'block' : 'none';
+                                    }
+                                } else if (slide.linkUrl) {
+                                    window.location.href = slide.linkUrl;
+                                }
+                            });
+                        }
+                        zone.appendChild(img);
+                    });
+                } else {
+                    zone.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:#999; font-size:12px;">[Area Slider Kosong]</div>`;
+                }
+
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                zone.appendChild(handle);
+
+                let slidesSettingsHtml = '';
+                if (item.slides) {
+                    item.slides.forEach((slide, idx) => {
+                        let popupOpts = '<option value="">-- Tidak Ada --</option>';
+                        popupItems.forEach(p => {
+                            popupOpts += `<option value="${p.id}" ${slide.targetPopup === p.id ? 'selected' : ''}>${p.id.slice(-4)}</option>`;
+                        });
+                        
+                        slidesSettingsHtml += `
+                            <div style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <strong>Slide ${idx+1}</strong>
+                                    <button class="del-slide-btn" data-idx="${idx}" style="background:red; color:white; border:none; padding:2px 5px; cursor:pointer;">X</button>
+                                </div>
+                                <label style="display:block; margin-top:3px; font-size:10px;">URL Tujuan:</label>
+                                <input type="text" class="slide-link-input" data-idx="${idx}" value="${slide.linkUrl || ''}" style="width:100%; box-sizing:border-box;">
+                                <label style="display:block; margin-top:3px; font-size:10px;">Popup Tujuan:</label>
+                                <select class="slide-popup-select" data-idx="${idx}" style="width:100%; box-sizing:border-box;">${popupOpts}</select>
+                            </div>
+                        `;
+                    });
+                }
+
+                const toolbar = document.createElement('div');
+                toolbar.innerHTML = `
+                    <div class="settings-trigger">⚙️</div>
+                    <div class="settings-popup" style="width:200px; max-height:300px; overflow-y:auto;">
+                        <button class="upload-slide-btn" style="width:100%; padding:5px; margin-bottom:10px; background:#4CAF50; color:white; border:none; cursor:pointer;">+ Upload Gambar Slide</button>
+                        ${slidesSettingsHtml}
+                        <div class="settings-row" style="margin-top:10px;">
+                            <label style="font-size:10px;">Jarak Ujung (px):</label>
+                            <input type="number" class="slider-padding-input" value="${item.padding !== undefined ? item.padding : 5}" style="width:50px;">
+                        </div>
+                        <div class="settings-row" style="margin-top:5px;">
+                            <label style="font-size:10px;">Jarak Antar Gambar (px):</label>
+                            <input type="number" class="slider-gap-input" value="${item.gap !== undefined ? item.gap : 10}" style="width:50px;">
+                        </div>
+                        <div class="settings-row" style="margin-top:10px;">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                <input type="checkbox" class="lock-scroll-cb" ${item.isFixed ? 'checked' : ''}> 📌 Lock Scroll
+                            </label>
+                        </div>
+                    </div>
+                `;
+                
+                const trigger = toolbar.querySelector('.settings-trigger');
+                const popup = toolbar.querySelector('.settings-popup');
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.settings-popup.show').forEach(p => { if (p !== popup) p.classList.remove('show'); });
+                    popup.classList.toggle('show');
+                });
+                popup.addEventListener('mousedown', e => e.stopPropagation());
+                trigger.addEventListener('mousedown', e => e.stopPropagation());
+
+                toolbar.querySelector('.lock-scroll-cb').addEventListener('change', (e) => {
+                    saveToHistory(); item.isFixed = e.target.checked; saveAndRender();
+                });
+
+                toolbar.querySelector('.slider-padding-input').addEventListener('change', (e) => {
+                    saveToHistory(); item.padding = parseInt(e.target.value) || 0; saveAndRender();
+                });
+
+                toolbar.querySelector('.slider-gap-input').addEventListener('change', (e) => {
+                    saveToHistory(); item.gap = parseInt(e.target.value) || 0; saveAndRender();
+                });
+
+                toolbar.querySelector('.upload-slide-btn').addEventListener('click', () => {
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*';
+                    fileInput.multiple = true;
+                    fileInput.onchange = (e) => {
+                        const files = Array.from(e.target.files);
+                        if(files.length > 0) {
+                            saveToHistory();
+                            if(!item.slides) item.slides = [];
+                            let loadedCount = 0;
+                            files.forEach(file => {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                    item.slides.push({
+                                        id: 'slide-' + Date.now() + Math.random(),
+                                        image: event.target.result,
+                                        linkUrl: '',
+                                        targetPopup: ''
+                                    });
+                                    loadedCount++;
+                                    if(loadedCount === files.length) {
+                                        const img = new Image();
+                                        img.onload = () => {
+                                            const imgRatio = img.naturalHeight / img.naturalWidth;
+                                            const containerWidth = appContainer.clientWidth;
+                                            const containerHeight = appContainer.offsetHeight || (containerWidth / 0.35);
+                                            const actualWidthPx = (item.width / 100) * containerWidth;
+                                            const newHeightPx = actualWidthPx * imgRatio;
+                                            item.height = (newHeightPx / containerHeight) * 100;
+                                            saveAndRender();
+                                        };
+                                        img.src = item.slides[0].image;
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            });
+                        }
+                    };
+                    fileInput.click();
+                });
+
+                toolbar.querySelectorAll('.del-slide-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-idx'));
+                        saveToHistory();
+                        item.slides.splice(idx, 1);
+                        saveAndRender();
+                    });
+                });
+
+                toolbar.querySelectorAll('.slide-link-input').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-idx'));
+                        saveToHistory();
+                        item.slides[idx].linkUrl = e.target.value;
+                        saveAndRender();
+                    });
+                });
+
+                toolbar.querySelectorAll('.slide-popup-select').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-idx'));
+                        saveToHistory();
+                        item.slides[idx].targetPopup = e.target.value;
+                        saveAndRender();
+                    });
+                });
+
+                wrapper.appendChild(toolbar);
+                wrapper.appendChild(zone);
+                parentContainer.appendChild(wrapper);
+                
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                zone.addEventListener('mousedown', (e) => {
+                    if (isEditing) return;
+                    isDown = true;
+                    isDraggingSlider = false;
+                    startX = e.pageX - zone.offsetLeft;
+                    scrollLeft = zone.scrollLeft;
+                    zone.style.cursor = 'grabbing';
+                });
+                zone.addEventListener('mouseleave', () => {
+                    if (!isEditing) {
+                        isDown = false;
+                        zone.style.cursor = 'grab';
+                    }
+                });
+                zone.addEventListener('mouseup', () => {
+                    if (!isEditing) {
+                        isDown = false;
+                        zone.style.cursor = 'grab';
+                        setTimeout(() => { isDraggingSlider = false; }, 50);
+                    }
+                });
+                zone.addEventListener('mousemove', (e) => {
+                    if (!isDown || isEditing) return;
+                    e.preventDefault();
+                    const x = e.pageX - zone.offsetLeft;
+                    const walk = (x - startX) * 1.5;
+                    if (Math.abs(walk) > 5) {
+                        isDraggingSlider = true;
+                    }
+                    zone.scrollLeft = scrollLeft - walk;
+                });
+
+                makeInteractive(wrapper, zone, item);
+                return;
+            }
+
             const zone = document.createElement('div');
             zone.className = 'placeholder-zone';
             zone.setAttribute('data-locked', item.locked || false);
@@ -828,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const finalW = Math.max(newW, 20);
                             current.config.width = (finalW / containerRect.width) * 100;
                             current.wrapper.style.width = current.config.width + '%';
-                        } else if (current.config.type === 'link') {
+                        } else if (current.config.type === 'link' || current.config.type === 'slider') {
                             const finalW = Math.max(newW, 20);
                             const finalH = Math.max(newH, 20);
                             current.config.width = (finalW / containerRect.width) * 100;
