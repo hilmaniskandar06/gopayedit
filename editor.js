@@ -613,7 +613,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 zone.style.boxSizing = 'border-box';
                 zone.style.scrollbarWidth = 'none';
 
-                let isDraggingSlider = false;
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+                let dragStartTime = 0;
 
                 if (item.slides && item.slides.length > 0) {
                     item.slides.forEach((slide, idx) => {
@@ -622,21 +625,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                         img.style.height = '100%';
                         img.style.width = 'auto';
                         img.style.objectFit = 'contain';
-                        img.style.cursor = isEditing ? 'default' : 'grab';
+                        img.style.cursor = isEditing ? 'default' : 'pointer';
                         img.style.flexShrink = '0';
+                        img.style.position = 'relative';
+                        img.style.zIndex = '10';
+                        img.style.pointerEvents = 'auto';
                         img.ondragstart = () => false;
 
                         if (!isEditing) {
                             img.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                if (isDraggingSlider) return;
+                                const dragDist = Math.abs((e.pageX - zone.offsetLeft) - startX);
+                                
+                                // Jika bergeser lebih dari 5px, anggap sebagai drag (geser)
+                                if (dragDist > 5) {
+                                    return;
+                                }
+
                                 if (slide.targetPopup) {
                                     const targetEl = document.getElementById('wrap-' + slide.targetPopup);
                                     if (targetEl) {
                                         targetEl.style.display = targetEl.style.display === 'none' ? 'block' : 'none';
                                     }
                                 } else if (slide.linkUrl) {
-                                    window.location.href = slide.linkUrl;
+                                    let url = slide.linkUrl;
+                                    if (!url.startsWith('http') && !url.includes('.html')) {
+                                        url += '.html';
+                                    }
+                                    window.location.href = url;
                                 }
                             });
                         }
@@ -661,7 +677,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         slidesSettingsHtml += `
                             <div style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <strong>Slide ${idx+1}</strong>
+                                    <div style="display:flex; align-items:center; gap:5px;">
+                                        <img src="${slide.image}" style="width:20px; height:20px; object-fit:cover; border-radius:3px;">
+                                        <strong>Slide ${idx+1}</strong>
+                                    </div>
                                     <button class="del-slide-btn" data-idx="${idx}" style="background:red; color:white; border:none; padding:2px 5px; cursor:pointer;">X</button>
                                 </div>
                                 <label style="display:block; margin-top:3px; font-size:10px;">URL Tujuan:</label>
@@ -727,32 +746,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if(files.length > 0) {
                             saveToHistory();
                             if(!item.slides) item.slides = [];
-                            let loadedCount = 0;
-                            files.forEach(file => {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                    item.slides.push({
+                            
+                            Promise.all(files.map(file => {
+                                return new Promise(resolve => {
+                                    const reader = new FileReader();
+                                    reader.onload = e => resolve({
                                         id: 'slide-' + Date.now() + Math.random(),
-                                        image: event.target.result,
+                                        image: e.target.result,
                                         linkUrl: '',
                                         targetPopup: ''
                                     });
-                                    loadedCount++;
-                                    if(loadedCount === files.length) {
-                                        const img = new Image();
-                                        img.onload = () => {
-                                            const imgRatio = img.naturalHeight / img.naturalWidth;
-                                            const containerWidth = appContainer.clientWidth;
-                                            const containerHeight = appContainer.offsetHeight || (containerWidth / 0.35);
-                                            const actualWidthPx = (item.width / 100) * containerWidth;
-                                            const newHeightPx = actualWidthPx * imgRatio;
-                                            item.height = (newHeightPx / containerHeight) * 100;
-                                            saveAndRender();
-                                        };
-                                        img.src = item.slides[0].image;
-                                    }
+                                    reader.readAsDataURL(file);
+                                });
+                            })).then(newSlides => {
+                                item.slides.push(...newSlides);
+                                const img = new Image();
+                                img.onload = () => {
+                                    const imgRatio = img.naturalHeight / img.naturalWidth;
+                                    const containerWidth = appContainer.clientWidth;
+                                    const containerHeight = appContainer.offsetHeight || (containerWidth / 0.35);
+                                    const actualWidthPx = (item.width / 100) * containerWidth;
+                                    const newHeightPx = actualWidthPx * imgRatio;
+                                    item.height = (newHeightPx / containerHeight) * 100;
+                                    saveAndRender();
                                 };
-                                reader.readAsDataURL(file);
+                                img.src = item.slides[0].image;
                             });
                         }
                     };
@@ -790,40 +808,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wrapper.appendChild(zone);
                 parentContainer.appendChild(wrapper);
                 
-                let isDown = false;
-                let startX;
-                let scrollLeft;
-
                 zone.addEventListener('mousedown', (e) => {
                     if (isEditing) return;
                     isDown = true;
-                    isDraggingSlider = false;
+                    dragStartTime = Date.now();
                     startX = e.pageX - zone.offsetLeft;
                     scrollLeft = zone.scrollLeft;
-                    zone.style.cursor = 'grabbing';
                 });
                 zone.addEventListener('mouseleave', () => {
                     if (!isEditing) {
                         isDown = false;
-                        zone.style.cursor = 'grab';
+                        zone.style.cursor = '';
                     }
                 });
                 zone.addEventListener('mouseup', () => {
                     if (!isEditing) {
                         isDown = false;
-                        zone.style.cursor = 'grab';
-                        setTimeout(() => { isDraggingSlider = false; }, 50);
+                        zone.style.cursor = '';
                     }
                 });
                 zone.addEventListener('mousemove', (e) => {
                     if (!isDown || isEditing) return;
-                    e.preventDefault();
                     const x = e.pageX - zone.offsetLeft;
-                    const walk = (x - startX) * 1.5;
-                    if (Math.abs(walk) > 5) {
-                        isDraggingSlider = true;
+                    const diff = Math.abs(x - startX);
+                    if (diff > 5) {
+                        zone.style.cursor = 'grabbing';
+                        const walk = (x - startX) * 1.5;
+                        zone.scrollLeft = scrollLeft - walk;
                     }
-                    zone.scrollLeft = scrollLeft - walk;
                 });
 
                 makeInteractive(wrapper, zone, item);
